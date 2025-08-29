@@ -148,6 +148,13 @@ def load_data(file):
 if file is not None:
     try:
         df = load_data(file)
+        else:
+    try:
+        df = load_data(DEFAULT_CSV_PATH)
+        st.sidebar.info(f"Cargando CSV por defecto desde `{DEFAULT_CSV_PATH}`")
+    except Exception as e:
+        st.error(f"❌ No se pudo cargar el CSV por defecto: {e}")
+        st.stop()
 
         # Asegurar que las columnas necesarias existen
         columnas_necesarias = ["SalePrice", "Neighborhood", "Year Built",
