@@ -148,7 +148,10 @@ def load_data(file):
 if file is not None:
     try:
         df = load_data(file)
-        else:
+    except Exception as e:
+        st.error(f"❌ Error al procesar el archivo subido: {str(e)}")
+        st.stop()
+else:
     try:
         df = load_data(DEFAULT_CSV_PATH)
         st.sidebar.info(f"Cargando CSV por defecto desde `{DEFAULT_CSV_PATH}`")
