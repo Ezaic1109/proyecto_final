@@ -16,6 +16,9 @@ WORKDIR /app
 # Copiar el código de la app
 COPY app.py /app/
 
+# Copiar el CSV al contenedor
+COPY AmesHousing.csv /app/data/AmesHousing.csv
+
 # Exponer el puerto de Streamlit
 EXPOSE 8501
 
