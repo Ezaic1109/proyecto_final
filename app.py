@@ -134,6 +134,9 @@ st.markdown("---")
 # ========================================
 st.sidebar.title("Cargar Datos")
 st.sidebar.markdown("Sube tu archivo CSV (AmesHousing.csv).")
+# Ruta por defecto dentro del contenedor
+DEFAULT_CSV_PATH = "data/AmesHousing.csv"
+
 file = st.sidebar.file_uploader("Subir archivo CSV", type="csv")
 
 @st.cache_data
