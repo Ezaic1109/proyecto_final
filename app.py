@@ -34,7 +34,7 @@ def get_connection():
 @st.cache_data
 def load_data():
     conn = get_connection()
-    query = "SELECT * FROM fact_taxi_trips;"
+    query = "SELECT * FROM AmesHousing;"
     df = pd.read_sql(query, conn)
     conn.close()
     return df
@@ -124,30 +124,27 @@ def load_data():
 # STREAMLIT APP
 # ========================================
 
-
 st.set_page_config(page_title="🏠 AmesHousing Dashboard", layout="wide")
 st.title("🏠 Análisis del Mercado Inmobiliario en Ames, Iowa")
-st.markdown("Explora el dataset de AmesHousing, descubre patrones y estima precios de viviendas 📊")
+st.markdown("Explora el dataset de AmesHousing desde **MySQL** 📊")
 st.markdown("---")
 
-# ---------------- CARGA AUTOMÁTICA DEL CSV ----------------
-CSV_PATH = "data/AmesHousing.csv"
-
+# ---------------- CARGAR DATOS ----------------
 try:
-    df = pd.read_csv(CSV_PATH)
-    st.sidebar.info(f"Cargando CSV automáticamente desde `{CSV_PATH}`")
+    df = load_data()
+    st.sidebar.info("✅ Datos cargados desde la base de datos MySQL")
 except Exception as e:
-    st.error(f"❌ No se pudo cargar el CSV: {e}")
+    st.error(f"❌ No se pudo conectar a la base de datos: {e}")
     st.stop()
 
 # ---------------- VERIFICACIÓN DE COLUMNAS ----------------
 columnas_necesarias = ["SalePrice", "Neighborhood", "Year Built",
                        "Gr Liv Area", "Overall Qual", "Garage Cars"]
 if not all(col in df.columns for col in columnas_necesarias):
-    st.error(f"⚠️ El archivo no contiene las columnas necesarias: {columnas_necesarias}")
+    st.error(f"⚠️ La tabla no contiene las columnas necesarias: {columnas_necesarias}")
     st.stop()
 
-# Convertir columnas a tipo numérico por seguridad
+# Convertir columnas a numéricas por seguridad
 df[["SalePrice","Gr Liv Area","Overall Qual","Garage Cars","Year Built"]] = \
     df[["SalePrice","Gr Liv Area","Overall Qual","Garage Cars","Year Built"]].apply(pd.to_numeric, errors='coerce')
 
