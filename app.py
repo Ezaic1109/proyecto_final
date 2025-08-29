@@ -135,49 +135,39 @@ st.markdown("---")
 st.sidebar.title("Cargar Datos")
 st.sidebar.markdown("Sube tu archivo CSV (AmesHousing.csv).")
 # Ruta por defecto dentro del contenedor
-DEFAULT_CSV_PATH = "data/AmesHousing.csv"
-
-file = st.sidebar.file_uploader("Subir archivo CSV", type="csv")
+CSV_PATH = "data/AmesHousing.csv"
 
 @st.cache_data
-def load_data(file):
-    """Carga CSV (en el futuro se puede reemplazar por SQL)"""
-    df = pd.read_csv(file)
-    return df
+def load_data(file_path):
+    return pd.read_csv(file_path)
 
-if file is not None:
-    try:
-        df = load_data(file)
-    except Exception as e:
-        st.error(f"❌ Error al procesar el archivo subido: {str(e)}")
-        st.stop()
-else:
-    try:
-        df = load_data(DEFAULT_CSV_PATH)
-        st.sidebar.info(f"Cargando CSV por defecto desde `{DEFAULT_CSV_PATH}`")
-    except Exception as e:
-        st.error(f"❌ No se pudo cargar el CSV por defecto: {e}")
-        st.stop()
+try:
+    df = load_data(CSV_PATH)
+    st.sidebar.info(f"Cargando CSV automáticamente desde `{CSV_PATH}`")
+except Exception as e:
+    st.error(f"❌ No se pudo cargar el CSV: {e}")
+    st.stop()
 
-        # Asegurar que las columnas necesarias existen
-        columnas_necesarias = ["SalePrice", "Neighborhood", "Year Built",
-                               "Gr Liv Area", "Overall Qual", "Garage Cars"]
-        if not all(col in df.columns for col in columnas_necesarias):
-            st.error(f"⚠️ El archivo no contiene las columnas necesarias: {columnas_necesarias}")
-            st.stop()
+# ========================================
+# VERIFICACIÓN DE COLUMNAS
+# ========================================
+columnas_necesarias = ["SalePrice", "Neighborhood", "Year Built",
+                       "Gr Liv Area", "Overall Qual", "Garage Cars"]
+if not all(col in df.columns for col in columnas_necesarias):
+    st.error(f"⚠️ El archivo no contiene las columnas necesarias: {columnas_necesarias}")
+    st.stop()
 
-        # Convertir columnas a tipo numérico por seguridad
-        df[["SalePrice","Gr Liv Area","Overall Qual","Garage Cars","Year Built"]] = \
-            df[["SalePrice","Gr Liv Area","Overall Qual","Garage Cars","Year Built"]].apply(pd.to_numeric, errors='coerce')
+# Convertir columnas a tipo numérico por seguridad
+df[["SalePrice","Gr Liv Area","Overall Qual","Garage Cars","Year Built"]] = \
+    df[["SalePrice","Gr Liv Area","Overall Qual","Garage Cars","Year Built"]].apply(pd.to_numeric, errors='coerce')
 
-        # ---------------- FILTROS ----------------
-        st.sidebar.subheader("Filtros")
-        barrios = ["Todos"] + sorted(df["Neighborhood"].dropna().unique().tolist())
-        barrio_sel = st.sidebar.selectbox("Selecciona un vecindario:", barrios)
-        if barrio_sel != "Todos":
-            df = df[df["Neighborhood"] == barrio_sel].copy()
-            st.success(f"Analizando solo el vecindario: **{barrio_sel}**")
-
+# ---------------- FILTROS ----------------
+st.sidebar.subheader("Filtros")
+barrios = ["Todos"] + sorted(df["Neighborhood"].dropna().unique().tolist())
+barrio_sel = st.sidebar.selectbox("Selecciona un vecindario:", barrios)
+if barrio_sel != "Todos":
+    df = df[df["Neighborhood"] == barrio_sel].copy()
+    st.success(f"Analizando solo el vecindario: **{barrio_sel}**")
         # ---------------- VISTA PREVIA ----------------
         st.subheader("Vista Previa de los Datos")
         st.dataframe(df.head())
