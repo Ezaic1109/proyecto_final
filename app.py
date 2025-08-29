@@ -124,39 +124,30 @@ def load_data():
 # STREAMLIT APP
 # ========================================
 
+
 st.set_page_config(page_title="🏠 AmesHousing Dashboard", layout="wide")
 st.title("🏠 Análisis del Mercado Inmobiliario en Ames, Iowa")
 st.markdown("Explora el dataset de AmesHousing, descubre patrones y estima precios de viviendas 📊")
 st.markdown("---")
 
-# ========================================
-# CARGAR CSV AUTOMÁTICAMENTE
-# ========================================
-st.sidebar.title("Cargar Datos")
-st.sidebar.markdown("CSV cargado automáticamente desde el contenedor.")
+# ---------------- CARGA AUTOMÁTICA DEL CSV ----------------
 CSV_PATH = "data/AmesHousing.csv"
 
-@st.cache_data
-def load_data(file_path):
-    return pd.read_csv(file_path)
-
 try:
-    df = load_data(CSV_PATH)
+    df = pd.read_csv(CSV_PATH)
     st.sidebar.info(f"Cargando CSV automáticamente desde `{CSV_PATH}`")
 except Exception as e:
     st.error(f"❌ No se pudo cargar el CSV: {e}")
     st.stop()
 
-# ========================================
-# VERIFICACIÓN DE COLUMNAS
-# ========================================
+# ---------------- VERIFICACIÓN DE COLUMNAS ----------------
 columnas_necesarias = ["SalePrice", "Neighborhood", "Year Built",
                        "Gr Liv Area", "Overall Qual", "Garage Cars"]
 if not all(col in df.columns for col in columnas_necesarias):
     st.error(f"⚠️ El archivo no contiene las columnas necesarias: {columnas_necesarias}")
     st.stop()
 
-# Convertir columnas a tipo numérico
+# Convertir columnas a tipo numérico por seguridad
 df[["SalePrice","Gr Liv Area","Overall Qual","Garage Cars","Year Built"]] = \
     df[["SalePrice","Gr Liv Area","Overall Qual","Garage Cars","Year Built"]].apply(pd.to_numeric, errors='coerce')
 
@@ -193,21 +184,18 @@ st.markdown("---")
 st.subheader("Distribución de Precios de Venta")
 fig, ax = plt.subplots(figsize=(8,5))
 sns.histplot(df["SalePrice"], bins=30, kde=True, ax=ax)
-fig.tight_layout()
 st.pyplot(fig)
 
 # Área habitable vs Precio
 st.subheader("Área habitable vs Precio de Venta")
 fig, ax = plt.subplots(figsize=(8,5))
 sns.scatterplot(x="Gr Liv Area", y="SalePrice", data=df, alpha=0.6, ax=ax)
-fig.tight_layout()
 st.pyplot(fig)
 
 # Precio por calidad general
 st.subheader("Precio de Venta por Calidad General")
 fig, ax = plt.subplots(figsize=(8,5))
 sns.boxplot(x="Overall Qual", y="SalePrice", data=df, ax=ax)
-fig.tight_layout()
 st.pyplot(fig)
 
 # Precio promedio por vecindario
@@ -216,5 +204,77 @@ neigh_price = df.groupby("Neighborhood")["SalePrice"].mean().sort_values(ascendi
 fig, ax = plt.subplots(figsize=(12,6))
 sns.barplot(x=neigh_price.index, y=neigh_price.values, ax=ax)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
-fig.tight_layout()
 st.pyplot(fig)
+
+# Correlación con el precio
+st.subheader("Correlación con el Precio de Venta")
+corr = df.corr(numeric_only=True)
+fig, ax = plt.subplots(figsize=(8,6))
+sns.barplot(
+    x=corr["SalePrice"].sort_values(ascending=False).values,
+    y=corr["SalePrice"].sort_values(ascending=False).index,
+    ax=ax
+)
+ax.set_title("Correlación con SalePrice")
+st.pyplot(fig)
+
+# Mapa de calor
+st.write("Mapa de calor de correlaciones:")
+fig, ax = plt.subplots(figsize=(10,8))
+sns.heatmap(corr, cmap="coolwarm", annot=False)
+st.pyplot(fig)
+
+st.markdown("---")
+
+# ---------------- MODELO DE PREDICCIÓN ----------------
+st.subheader("Modelo de Predicción (Regresión Lineal)")
+
+X = df[["Gr Liv Area", "Overall Qual", "Garage Cars", "Year Built"]]
+y = df["SalePrice"]
+
+imputer = SimpleImputer(strategy="median")
+X_imputed = imputer.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X_imputed, y, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+c1, c2 = st.columns(2)
+with c1:
+    st.metric("Error Absoluto Medio", f"${mae:,.0f}")
+with c2:
+    st.metric("R²", f"{r2:.2f}")
+
+fig, ax = plt.subplots(figsize=(8,5))
+sns.scatterplot(x=y_test, y=y_pred, alpha=0.6, ax=ax)
+ax.set_xlabel("Precio Real")
+ax.set_ylabel("Precio Predicho")
+ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+st.pyplot(fig)
+
+st.markdown("---")
+
+# ---------------- SIMULADOR ----------------
+st.subheader("🔮 Simulador de Precio de Vivienda")
+area = st.slider("Área habitable (Gr Liv Area)", 300, 6000, 1500)
+calidad = st.slider("Calidad General (Overall Qual)", 1, 10, 5)
+garage = st.slider("Número de Coches en Garage", 0, 4, 2)
+anio = st.slider("Año de Construcción", 1870, 2025, 2000)
+
+entrada = pd.DataFrame([[int(area), int(calidad), int(garage), int(anio)]],
+                       columns=["Gr Liv Area", "Overall Qual", "Garage Cars", "Year Built"])
+entrada_imputada = imputer.transform(entrada)
+prediccion = model.predict(entrada_imputada)[0]
+st.success(f"💰 Precio estimado de la vivienda: **${prediccion:,.0f}**")
+
+st.subheader("Proyección de Precios a Futuro")
+inflacion = st.slider("Tasa de Inflación Anual (%)", 0.0, 10.0, 3.0) / 100
+anio_futuro = st.slider("Año de proyección", 2023, 2050, 2025)
+precio_futuro = prediccion * ((1 + inflacion) ** (anio_futuro - 2023))
+st.info(f"📈 Precio estimado en {anio_futuro}: **${precio_futuro:,.0f}**")
